@@ -11,9 +11,9 @@ namespace Library_Management_System.Services
         private Member[] members = new Member[50];
         private BorrowRecord[] borrowRecords = new BorrowRecord[50];
 
-        private int BookId = 0;
-        private int BorrowId = 0;
-        private int MemberId = 0;
+        private int BookId = 1;
+        private int BorrowId = 1;
+        private int MemberId = 1;
 
 
         // Adding new book
@@ -24,6 +24,7 @@ namespace Library_Management_System.Services
                 throw new ArgumentException("Please Fill the book title ,author name ,and book genre!");
             }
             var newBook = new Books(BookId, title , DateTime.Now , author, year, genre);
+            EnsureCapacity(ref books, BookId);
             books[BookId] = newBook;
             BookId++;
             Console.WriteLine("Added new book!");
@@ -33,19 +34,28 @@ namespace Library_Management_System.Services
         // Adding new member
         public void AddMember(string name , string email , bool isPremium)
         {
-            if(string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(email)){
-                Console.WriteLine("Please enter your email and your name");
+            if(string.IsNullOrWhiteSpace(name)){
+                Console.WriteLine("Please enter your name");
+                return;
+            }
+            else if (string.IsNullOrWhiteSpace(email))
+            {
+                Console.WriteLine("Please enter your Email");
+                return;
             }
             else
             {
+                EnsureCapacity(ref members, MemberId);
                 if (isPremium)
                 {
-                    var newPreMember = new PremiumMember(MemberId, name , email , DateTime.Now);
+                    var newPreMember = new PremiumMember(MemberId, name , email);
                     Console.WriteLine("Added new Premium Member!");
+                    members[MemberId] = newPreMember;
+                    MemberId++;
                 }
                 else
                 {
-                    var newMember = new Member(MemberId, name, email, DateTime.Now);
+                    var newMember = new Member(MemberId, name, email);
                     Console.WriteLine("Added new Regular Member!");
                     members[MemberId] = newMember;
                     MemberId++;
@@ -57,21 +67,23 @@ namespace Library_Management_System.Services
         // Borrow a book
         public void BorrowBook(int bookId , int memberId)
         {
-            var book = FindBook(bookId);
-            var member = FindMember(memberId);
-            if (book == null || member == null)
-            {
-                throw new Exception("Can't Borrow the book!");
-            }
+            var book = FindBook(bookId) ?? throw new KeyNotFoundException("Book not found");
+            var member = FindMember(memberId) ?? throw new KeyNotFoundException($"Member with id {memberId} not found");
 
             if (book.IsAvailable == false)
                 {
-                    throw new Exception("Book is't available!");
+                    throw new InvalidOperationException("Book is't available!");
             }
                 
-              var newBorrowRecord = new BorrowRecord(BorrowId, book, member, DateTime.Now);
+            if(member.BorrowedBooks.Count >= member.MaxBorrowLimit)
+            {
+                throw new InvalidOperationException($"Member with id {memberId} has reach the max borrow limit of books");
+            }
+              var newBorrowRecord = new BorrowRecord(BorrowId, book, member);
+            member.BorrowedBooks.Add(book);
                         book.IsAvailable = false;
                         Console.WriteLine($"New book is Borrowed by {member.Name}");
+            EnsureCapacity(ref borrowRecords, BorrowId);
                         borrowRecords[BorrowId] = newBorrowRecord;
                         BorrowId++;      
         }
@@ -83,13 +95,15 @@ namespace Library_Management_System.Services
         public void ReturnBook(int bookId)
         {
             var book = FindBook(bookId);
-            if (book == null) throw new Exception("Wrong Id");
+            if (book == null) throw new InvalidOperationException("Book not found");
             book.IsAvailable = true;
             foreach(var record in borrowRecords)
             {
-                if (record != null && record.Book.Id == bookId)
+                if (record != null && record.Book.Id == bookId && record.ReturnDate == null)
                 {
                     record.ReturnDate = DateTime.Now;
+                    record.Member.BorrowedBooks.Remove(book);
+                    break;
                 }
             }
         }
@@ -97,11 +111,13 @@ namespace Library_Management_System.Services
         // Search for a book or member
         public void Search(string query)
         {
+            bool isfound = false;
             foreach(var book in books )
             {
                 if (book != null && book.MatchesQuery(query))
                 {
                     Console.WriteLine($"Book Title: {book.Title} , Book Genre: {book.Genre} , Author Name: {book.Author}");
+                    isfound = true;
                 }
             }
             foreach(var member in members )
@@ -109,11 +125,13 @@ namespace Library_Management_System.Services
                 if (member != null && member.MatchesQuery(query))
                 {
                     Console.WriteLine($"Member ID: {member.Id} , JoinDate: {member.JoinDate} , Email: {member.Email}");
-                    
+                    isfound=true; 
                 }
-                return;
             }
-            Console.WriteLine("Not Found");
+            if (!isfound)
+            {
+                Console.WriteLine("Not Found");
+            }
         }
 
         // Get Info For Available Books
@@ -149,7 +167,7 @@ namespace Library_Management_System.Services
             {
                 if (record != null && record.IsLate())
                 {
-                    Console.WriteLine($"Name : {record.Member.Name} , Title of book : {record.Book.Title} , Total Days of late : {DateTime.Now - record.BorrowDate}");
+                    Console.WriteLine($"Borrow record Id: {record.Id}");
                 }
             }
         }
@@ -179,6 +197,14 @@ namespace Library_Management_System.Services
         }
 
 
+        public void EnsureCapacity<T>(ref T[] arr,int currentCount)
+        {
+            if(currentCount >= arr.Length)
+            {
+                Array.Resize(ref arr, arr.Length*2);
+            }
+        }
+
         // Seeding Data
         public void SeedData()
         {
@@ -188,7 +214,7 @@ namespace Library_Management_System.Services
             AddMember("Sara Hassan", "sara@gmail.com" ,isPremium: true);
             AddMember("Ahmed Ali", "ahmed@gmail.com", isPremium:false);
 
-            BorrowBook(0,0);
+            BorrowBook(1,1);
         }
     }
 }
