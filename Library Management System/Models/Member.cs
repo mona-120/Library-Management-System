@@ -7,19 +7,20 @@ namespace Library_Management_System.Models
 {
     public class Member : ISearchable
     {
-        
+         public readonly int MaxBorrowLimit = 5;
+         public readonly int LoanDays = 20;
+ 
         public int Id { get; set; }
         public string Name { get; set; }
         public string Email { get; set; }
-        public DateTime JoinDate { get; set; }
-        public Books[] BorrowedBooks { get; set; }
+        public DateTime JoinDate { get; set; } = DateTime.Now;
+        public List<Books> BorrowedBooks { get; set; } = new List<Books>();
 
-        public Member(int id, string name , string email , DateTime joinDate)
+        public Member(int id, string name , string email)
         {
             Id = id;
             Name = name;
             Email = email;
-            JoinDate = DateTime.Now;
         }
 
         public virtual void GetInfo()
