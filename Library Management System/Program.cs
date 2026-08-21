@@ -28,10 +28,10 @@ namespace Library_Management_System
                 Console.WriteLine("choose 0 to Exit");
                 Console.WriteLine("============================================================");
 
-                int choice = int.Parse(Console.ReadLine());
 
                 try
                 {
+                    int choice = int.Parse(Console.ReadLine());
                     switch (choice)
                     {
                         case 1:
