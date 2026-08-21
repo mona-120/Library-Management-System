@@ -9,7 +9,7 @@ namespace Library_Management_System.Models
         private const int MaxBorrowLimit = 10;
         private const int LoanDays = 30;
 
-        public PremiumMember(int id , string name , string email , DateTime joinDate) : base(id , name , email , joinDate) { }
+        public PremiumMember(int id , string name , string email) : base(id , name , email) { }
         public override void GetInfo()
         {
             base.GetInfo();
